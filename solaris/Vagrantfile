@@ -1,0 +1,142 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+require 'socket'
+require 'ipaddr'
+
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
+
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+  config.vm.hostname = "postgis-vagrant"
+
+  # To confirm that ssh fowarding is working, run the following from inside the
+  # guest machine:
+  #
+  #   ssh -T git@github.com
+  #
+  # You should see something like "Hi <your name here>! You've successfully
+  # authenticated, but GitHub does not provide shell access."
+  #
+  # You may need to run `ssh-add` on your host machine to add your private key
+  # identities to the authentication agent.
+  config.ssh.forward_agent = true
+  
+  # For remote access to the PostgreSQL server, 
+  # forward port 6543 on the host to 5432 on the guest
+  config.vm.network :forwarded_port, guest: 5432, host: 6543
+
+  # VirtualBox specific configurations
+  config.vm.provider :virtualbox do |vb|
+
+    # How much memory to use?
+    vb.customize ["modifyvm", :id, "--memory", 2048]
+
+    # How many CPUs to use?
+    vb.customize ["modifyvm", :id, "--cpus", 1]
+
+    # Fast I/O?
+    # vb.customize ["modifyvm", :id, "--ioapic", "on"]
+
+    # Use the VirtualBox GUI for graphic desktop?
+    vb.gui = false
+    
+  end
+
+  # OSX specific configuration
+  if RUBY_PLATFORM.include? "darwin"
+    # Customize the private network's IP. 
+    # config.vm.network "private_network", ip: "192.168.50.4"
+
+    # Use NFS for the synced folder?
+    # config.vm.synced_folder ".", "/vagrant", nfs: true
+  end
+
+  # Windows specific configuration
+  if RUBY_PLATFORM.include? "win32"
+    config.vm.synced_folder ".", "/vagrant", type: "smb"
+  end
+
+
+  ##################################################################################
+  # Solaris 11
+  #
+  config.vm.box = "ruby-concurrency/oracle-solaris-11" 
+  config.vm.box_url = "https://vagrantcloud.com/ruby-concurrency/boxes/oracle-solaris-11/versions/0.1.0/providers/virtualbox.box"
+
+  repoCmd = "pkgadd -n -d http://get.opencsw.org/now all"
+  updateCmd = "/opt/csw/bin/pkgutil -U"
+  solarisCmd = "pkg install system/header"
+
+  packageCmd = "/opt/csw/bin/pkgutil -y -i"
+  packageList = [
+    "git",
+    "subversion",
+    "pkgconfig",
+    "gcc4core",
+    "gcc4g++",
+    "cmake",
+    "autoconf",
+    "screen",
+    "libtool",
+    "gtk2",
+    "geos_dev",
+    "gdal",
+    "gdal_dev",
+    "proj",
+    "proj_data",
+    "proj_dev",
+    "libxml2_2",
+    "libxml2_dev",
+    "postgresql93",
+    "postgresql93_server",
+    "postgresql93_client",
+    "postgresql93_contrib",
+    "postgresql_dev",
+    "libxslt",
+    "libxslt1",
+    "libxslt_dev",
+    "libiconv2",
+    "libiconv_dev",
+    "libz1",
+    "libz_dev",
+    "docbookxsl",
+    "imagemagick"
+  ];
+
+
+  #   "json-c-devel",
+  #   "CUnit-devel",
+    
+    
+  # Run the initialization only the first time...
+  if Dir.glob("#{File.dirname(__FILE__)}/.vagrant/machines/default/*/id").empty?
+
+    inlineScript = ""
+
+    # Install the http://opencsw.org repository
+    config.vm.provision :shell, :inline => repoCmd
+    
+    # Update the base software
+    config.vm.provision :shell, :inline => updateCmd
+
+    # Add system headers
+    config.vm.provision :shell, :inline => solarisCmd
+
+    # install packages we need we need
+    inlineScript << packageCmd << " " << packageList.join(" ") << " ; "
+    config.vm.provision :shell, :inline => inlineScript
+
+    scripts = [
+      "json-c.sh",
+      "cunit.sh",
+    ];
+
+    scripts.each { |script| config.vm.provision :shell, :path => "scripts/" << script }
+    
+  end
+  
+
+end
