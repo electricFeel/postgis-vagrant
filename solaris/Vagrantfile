@@ -88,6 +88,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     "pkgconfig",
     "gcc4core",
     "gcc4g++",
+    "flex",
+    "bison",
     "gdb",
     "gtk2",
     "geos_dev",
@@ -106,18 +108,16 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # Run the initialization only the first time...
   if Dir.glob("#{File.dirname(__FILE__)}/.vagrant/machines/default/*/id").empty?
 
+    # install packages we need from solaris base
     inlineScript = ""
+    inlineScript << solPackageCmd << " " << solPackageList.join(" ") << " ; "
+    config.vm.provision :shell, :inline => inlineScript
 
     # Install the http://opencsw.org repository
     config.vm.provision :shell, :inline => repoCmd
     
     # update the base software
     config.vm.provision :shell, :inline => updateCmd
-
-    # install packages we need from solaris base
-    inlineScript = ""
-    inlineScript << solPackageCmd << " " << solPackageList.join(" ") << " ; "
-    config.vm.provision :shell, :inline => inlineScript
 
     # install packages we need from opencsw
     inlineScript = ""

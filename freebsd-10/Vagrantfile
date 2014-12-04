@@ -26,7 +26,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   
   # For remote access to the PostgreSQL server, 
   # forward port 6543 on the host to 5432 on the guest
-  config.vm.network :forwarded_port, guest: 5432, host: 6544
+  config.vm.network :forwarded_port, guest: 5432, host: 6546
 
   # VirtualBox specific configurations
   config.vm.provider :virtualbox do |vb|
@@ -50,7 +50,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     config.vm.synced_folder ".", "/vagrant", type: "smb"
   else
     config.vm.network "private_network", type: "dhcp"
-    config.vm.synced_folder ".", "/vagrant", nfs: true
+    config.vm.synced_folder ".", "/vagrant", disabled: true
   end
 
 
@@ -60,53 +60,49 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = "chef/freebsd-10.0" 
   config.vm.box_url = "https://vagrantcloud.com/chef/boxes/freebsd-10.0/versions/1.0.0/providers/virtualbox.box"
 
-  repoCmd = "pkgadd -a /vagrant/scripts/admin -n -d http://get.opencsw.org/now all"
-  updateCmd = "/opt/csw/bin/pkgutil -U"
-  solarisCmd = "pkg install system/header"
+  updateCmd = "pkg update; pkg install -y -q pkg; pkg update -f;"
 
-  packageCmd = "/opt/csw/bin/pkgutil -y -i"
+  packageCmd = "pkg install -y -q"
   packageList = [
     "git",
     "subversion",
-    "pkgconfig",
-    "gcc4core",
-    "gcc4g++",
     "cmake",
     "automake",
     "autoconf",
-    "screen",
     "libtool",
+    "gmake",
+    "screen",
     "gtk2",
-    "geos_dev",
+    "geos",
     "gdal",
-    "gdal_dev",
     "proj",
-    "proj_data",
-    "proj_dev",
-    "libiconv2",
-    "libiconv_dev",
-    "libz1",
-    "libz_dev"
+    "libxml2",
+    "libiconv",
+    "json-c",
+    "cunit",
+    "libxslt",
+    "iconv",
+    "gettext",
+    "ImageMagick-nox11",
+    "docbook-xsl",
+    "docbook-xml",
+    "postgresql93-server",
+    "postgresql93-client",
+    "postgresql93-contrib"    
   ];
 
     
   # Run the initialization only the first time...
   if Dir.glob("#{File.dirname(__FILE__)}/.vagrant/machines/default/*/id").empty?
 
-    # inlineScript = ""
 
-    # Install the http://opencsw.org repository
-    # config.vm.provision :shell, :inline => repoCmd
-    
     # Update the base software
-    # config.vm.provision :shell, :inline => updateCmd
-
-    # Add system headers
-    # config.vm.provision :shell, :inline => solarisCmd
+    config.vm.provision :shell, :inline => updateCmd
 
     # install packages we need we need
-    # inlineScript << packageCmd << " " << packageList.join(" ") << " ; "
-    # config.vm.provision :shell, :inline => inlineScript
+    inlineScript = ""
+    inlineScript << packageCmd << " " << packageList.join(" ") << " ; "
+    config.vm.provision :shell, :inline => inlineScript
 
     # scripts = [
     #   "cunit.sh",
